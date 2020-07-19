@@ -1,0 +1,114 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: This template creates an IAM user with console access as well as programatic access.
+Metadata:
+  Authors:
+    Description: Amogh Jagadale (j.amogh06@gmail.com)
+
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      -
+        Label:
+          default: IAM Users parameters
+        Parameters:
+          - UserName
+          - Password          
+          - ManagedPolicy
+
+    ParameterLabels:
+      UserName: 
+        default: Username
+      Password:
+        default: User Password
+      ManagedPolicy:
+        default: Managed Policy
+
+Parameters: 
+
+  UserName:
+    Type: String
+    Description: AWS Console Username
+    ConstraintDescription: Alphanumeric characters with, maximum string size 64 characters. Only `.@-_` special characters are allowed.
+    AllowedPattern: ^[\w+=,.@-_]{1,64}$
+    
+  Password:
+    Type: String
+    Description: AWS Console password
+    ConstraintDescription: Password must be 8 to 35 Characters, Lowercase and Upercase alphanumeric character and atleast one special character !@#$%&
+    NoEcho: true
+    AllowedPattern: ^[a-zA-Z][a-zA-Z0-9!@#$%&]{8,35}$
+  
+  ManagedPolicy:
+    Type: String
+    Description: Specify association with predefined managed policy
+    AllowedValues:
+      - Admin
+      - Read-Only
+      - Developer
+      - SecOps
+      - DBAdmin
+      - Operations
+      - Billing
+      - None
+    Default: None
+
+Mappings: 
+
+  ManagedPolicies:
+    Admin:
+      ARN: arn:aws:iam::aws:policy/AdministratorAccess
+      GroupRole: AdministratorAccess
+    Read-Only:
+      ARN: arn:aws:iam::aws:policy/job-function/ViewOnlyAccess
+      GroupRole: ViewOnlyAccess
+    Developer:
+      ARN: arn:aws:iam::aws:policy/PowerUserAccess
+      GroupRole: PowerUserAccess
+    DBAdmin:
+      ARN: arn:aws:iam::aws:policy/job-function/DatabaseAdministrator
+      GroupRole: DatabaseAdministrator
+    Operations:
+      ARN: arn:aws:iam::aws:policy/job-function/SupportUser
+      GroupRole: SupportUser
+    Billing:
+      ARN: arn:aws:iam::aws:policy/job-function/Billing
+      GroupRole: Billing
+    None: 
+      ARN: arn:aws:iam::aws:policy/NoAccess
+      GroupRole: NoAccess
+
+Conditions: 
+
+  hasManagedPolicy:
+    !Not [!Equals [!Ref ManagedPolicy, "None"]]
+
+  hasUserName: 
+    !Not [!Equals [!Ref UserName, "None"]]
+
+Resources: 
+
+  User:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: !If [hasUserName, !Ref UserName, !Ref "AWS::NoValue"]
+      LoginProfile:
+        Password: !Ref Password
+        PasswordResetRequired: True
+      ManagedPolicyArns:
+        - !If [hasManagedPolicy, !FindInMap [ManagedPolicies, !Ref ManagedPolicy, ARN], !Ref "AWS::NoValue"]
+  AccessKey:
+    Type: AWS::IAM::AccessKey
+    Properties: 
+      UserName: !Ref User
+
+Outputs:
+  UserName: 
+    Description: Username for IAM User
+    Value: !Ref User
+
+  AccessKeyId:
+    Description: Access Key 
+    Value: !Ref AccessKey
+    
+  AccessKeySecret:
+    Description: Secret
+    Value: !GetAtt AccessKey.SecretAccessKey
