@@ -11,7 +11,8 @@ Metadata:
           default: IAM Users parameters
         Parameters:
           - UserName
-          - Password          
+          - Password
+          - Groups         
           - ManagedPolicy
 
     ParameterLabels:
@@ -19,6 +20,8 @@ Metadata:
         default: Username
       Password:
         default: User Password
+      Groups:
+        defaut: Groups
       ManagedPolicy:
         default: Managed Policy
 
@@ -36,6 +39,12 @@ Parameters:
     ConstraintDescription: Password must be 8 to 35 Characters, Lowercase and Upercase alphanumeric character and atleast one special character !@#$%&
     NoEcho: true
     AllowedPattern: ^[a-zA-Z][a-zA-Z0-9!@#$%&]{8,35}$
+  
+  Groups:
+    Type: String
+    Description: AWS IAM Group
+    ConstraintDescription: Multiple values can be specified in comma delimated string (Group1,Group2)
+    Default: None
   
   ManagedPolicy:
     Type: String
@@ -83,6 +92,9 @@ Conditions:
 
   hasUserName: 
     !Not [!Equals [!Ref UserName, "None"]]
+  
+  hasGroup:
+    !Not [!Equals [!Ref Groups, "None"]]
 
 Resources: 
 
@@ -93,6 +105,8 @@ Resources:
       LoginProfile:
         Password: !Ref Password
         PasswordResetRequired: True
+      Groups: 
+        - !If [hasGroup, !Ref Groups, !Ref "AWS::NoValue"]
       ManagedPolicyArns:
         - !If [hasManagedPolicy, !FindInMap [ManagedPolicies, !Ref ManagedPolicy, ARN], !Ref "AWS::NoValue"]
   AccessKey:
